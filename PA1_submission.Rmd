@@ -7,9 +7,11 @@ output:
     keep_md: true
 ---
 ## Loading and preprocessing the data
-We will use the tidyverse package to read and process the data.  
+We will use the tidyverse package to read and process the data.
+We will use ggpubr for plotting.  
 ```{r echo=FALSE}
 library(tidyverse)
+library(ggpubr)
 data<-read_csv("activity.csv")
 ```
 Let's inspect and get some idea of what the data looks like. 
@@ -18,14 +20,44 @@ head(data)
 summary(data)
 ```
 
-
 ## What is mean total number of steps taken per day?
+We will ignore the NAs in this section. 
+We can group the data by date and calculate the mean & median total number of steps taken per day. 
+```{r}
+totalperday<-data %>%
+  group_by(date) %>%
+  summarize(`Total Steps`=sum(steps)) %>%
+  rename(Date=date)
+totalperday
+```
+Calculate mean and median values. 
+```{r}
+meanandmedian<-totalperday %>%
+  summarize(Mean=mean(`Total Steps`, na.rm=TRUE), Median=median(`Total Steps`, na.rm=TRUE))
+meanandmedian
+```
 
-
+Plot a histogram to visualize the total number of steps taken each day.
+```{r}
+gghistogram(totalperday, x="Total Steps", bins=50)
+```
 
 ## What is the average daily activity pattern?
-
-
+We first compute the average number of steps taken across all days for each 5-minute interval.
+```{r}
+timeseries<-data %>%
+  group_by(interval) %>%
+  summarise(`Mean Steps`=mean(steps, na.rm=TRUE)) %>%
+  rename(Time=interval) %>%
+  mutate(Time=format(strptime(sprintf("%04d", Time), format="%H%M"), format="%H:%M"))
+timeseries
+```
+Now we make a time series plot of the 5-minute interval and average number of steps taken, averaged across all days.
+```{r}
+ggline(timeseries, x="Time", y="Mean Steps")
+  
+```
+The maximum number of steps seem to occur at approximately 8am. 
 
 ## Imputing missing values
 
