@@ -48,19 +48,69 @@ We first compute the average number of steps taken across all days for each 5-mi
 timeseries<-data %>%
   group_by(interval) %>%
   summarise(`Mean Steps`=mean(steps, na.rm=TRUE)) %>%
-  rename(Time=interval) %>%
-  mutate(Time=format(strptime(sprintf("%04d", Time), format="%H%M"), format="%H:%M"))
+  rename(Time=interval)
 timeseries
 ```
 Now we make a time series plot of the 5-minute interval and average number of steps taken, averaged across all days.
 ```{r}
-ggline(timeseries, x="Time", y="Mean Steps")
+ggline(timeseries, x="Time", y="Mean Steps", numeric.x.axis=TRUE)
   
 ```
-The maximum number of steps seem to occur at approximately 8am. 
 
+The maximum number of steps seem to occur at approximately 0800. 
+Lets check the exact interval.
+
+```{r}
+timeseries[which.max(timeseries$`Mean Steps`),]
+```
 ## Imputing missing values
+Check the number of missing values in the dataset.
+```{r}
+sum(is.na(data))
+```
+Replace missing values with 0 for that 5-minute interval. 
+```{r}
+data_replacedNA<-data %>%
+  replace(is.na(.), 0)
+```
 
+Re-plot histogram to see any changes.
+```{r}
+totalperday_replacedNA<-data_replacedNA %>%
+  group_by(date) %>%
+  summarize(`Total Steps`=sum(steps)) %>%
+  rename(Date=date)
 
+gghistogram(totalperday_replacedNA, x="Total Steps", bins=50)
+```
+
+Calculate mean and median values. 
+```{r}
+meanandmedian_replacedNA<-totalperday_replacedNA %>%
+  summarize(Mean=mean(`Total Steps`, na.rm=TRUE), Median=median(`Total Steps`, na.rm=TRUE))
+meanandmedian_replacedNA
+```
+Both the mean and median have decreased due to the replacement of NAs with 0s. 
+Imputing missing data on the estimates may cause the estimates to shift, depending on what they were replaced by and thus we have to consider the values that we replace the NAs with. 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+Add a factor weekdays to the dataset.
+```{r}
+library(lubridate)
+weekdays<-data_replacedNA %>%
+  mutate(Day=day(as.POSIXct(date))) %>%
+  mutate(WeekDayEnd=as.factor(ifelse(Day==6|Day==7, "Weekend", "Weekday")))
+weekdays
+```
+Get the total number of steps for Weekdays and Weekends and create a line plot to visualise the difference.
+```{r}
+weekdays_total<-weekdays %>%
+  select(!Day) %>%
+  group_by(WeekDayEnd, interval) %>%
+  summarise(mean(steps)) %>%
+  rename(Interval=interval, `Mean Steps`=`mean(steps)`)
+
+ggline(weekdays_total, x="Interval", y="Mean Steps", facet.by="WeekDayEnd", numeric.x.axis=TRUE)
+```
+
+Here we observe that on weekdays, there's a clear peak in the morning hours. For weekends, the distribution is rather uniform. 

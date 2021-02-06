@@ -138,8 +138,7 @@ We first compute the average number of steps taken across all days for each 5-mi
 timeseries<-data %>%
   group_by(interval) %>%
   summarise(`Mean Steps`=mean(steps, na.rm=TRUE)) %>%
-  rename(Time=interval) %>%
-  mutate(Time=format(strptime(sprintf("%04d", Time), format="%H%M"), format="%H:%M"))
+  rename(Time=interval)
 ```
 
 ```
@@ -152,31 +151,154 @@ timeseries
 
 ```
 ## # A tibble: 288 x 2
-##    Time  `Mean Steps`
-##    <chr>        <dbl>
-##  1 00:00       1.72  
-##  2 00:05       0.340 
-##  3 00:10       0.132 
-##  4 00:15       0.151 
-##  5 00:20       0.0755
-##  6 00:25       2.09  
-##  7 00:30       0.528 
-##  8 00:35       0.868 
-##  9 00:40       0     
-## 10 00:45       1.47  
+##     Time `Mean Steps`
+##    <dbl>        <dbl>
+##  1     0       1.72  
+##  2     5       0.340 
+##  3    10       0.132 
+##  4    15       0.151 
+##  5    20       0.0755
+##  6    25       2.09  
+##  7    30       0.528 
+##  8    35       0.868 
+##  9    40       0     
+## 10    45       1.47  
 ## # ... with 278 more rows
 ```
 Now we make a time series plot of the 5-minute interval and average number of steps taken, averaged across all days.
 
 ```r
-ggline(timeseries, x="Time", y="Mean Steps") +
-  theme(axis.text.x = element_text(angle=90, size=4))
+ggline(timeseries, x="Time", y="Mean Steps", numeric.x.axis=TRUE)
 ```
 
 ![](PA1_submission_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
-The maximum number of steps seem to occur at approximately 8am. 
+
+The maximum number of steps seem to occur at approximately 0800. 
+Lets check the exact interval.
+
+
+```r
+timeseries[which.max(timeseries$`Mean Steps`),]
+```
+
+```
+## # A tibble: 1 x 2
+##    Time `Mean Steps`
+##   <dbl>        <dbl>
+## 1   835         206.
+```
 ## Imputing missing values
+Check the number of missing values in the dataset.
 
+```r
+sum(is.na(data))
+```
 
+```
+## [1] 2304
+```
+Replace missing values with 0 for that 5-minute interval. 
+
+```r
+data_replacedNA<-data %>%
+  replace(is.na(.), 0)
+```
+
+Re-plot histogram to see any changes.
+
+```r
+totalperday_replacedNA<-data_replacedNA %>%
+  group_by(date) %>%
+  summarize(`Total Steps`=sum(steps)) %>%
+  rename(Date=date)
+```
+
+```
+## `summarise()` ungrouping output (override with `.groups` argument)
+```
+
+```r
+gghistogram(totalperday_replacedNA, x="Total Steps", bins=50)
+```
+
+![](PA1_submission_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
+
+Calculate mean and median values. 
+
+```r
+meanandmedian_replacedNA<-totalperday_replacedNA %>%
+  summarize(Mean=mean(`Total Steps`, na.rm=TRUE), Median=median(`Total Steps`, na.rm=TRUE))
+meanandmedian_replacedNA
+```
+
+```
+## # A tibble: 1 x 2
+##    Mean Median
+##   <dbl>  <dbl>
+## 1 9354.  10395
+```
+Both the mean and median have decreased due to the replacement of NAs with 0s. 
+Imputing missing data on the estimates may cause the estimates to shift, depending on what they were replaced by and thus we have to consider the values that we replace the NAs with. 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+Add a factor weekdays to the dataset.
+
+```r
+library(lubridate)
+```
+
+```
+## 
+## Attaching package: 'lubridate'
+```
+
+```
+## The following objects are masked from 'package:base':
+## 
+##     date, intersect, setdiff, union
+```
+
+```r
+weekdays<-data_replacedNA %>%
+  mutate(Day=day(as.POSIXct(date))) %>%
+  mutate(WeekDayEnd=as.factor(ifelse(Day==6|Day==7, "Weekend", "Weekday")))
+weekdays
+```
+
+```
+## # A tibble: 17,568 x 5
+##    steps date       interval   Day WeekDayEnd
+##    <dbl> <date>        <dbl> <int> <fct>     
+##  1     0 2012-10-01        0     1 Weekday   
+##  2     0 2012-10-01        5     1 Weekday   
+##  3     0 2012-10-01       10     1 Weekday   
+##  4     0 2012-10-01       15     1 Weekday   
+##  5     0 2012-10-01       20     1 Weekday   
+##  6     0 2012-10-01       25     1 Weekday   
+##  7     0 2012-10-01       30     1 Weekday   
+##  8     0 2012-10-01       35     1 Weekday   
+##  9     0 2012-10-01       40     1 Weekday   
+## 10     0 2012-10-01       45     1 Weekday   
+## # ... with 17,558 more rows
+```
+Get the total number of steps for Weekdays and Weekends and create a line plot to visualise the difference.
+
+```r
+weekdays_total<-weekdays %>%
+  select(!Day) %>%
+  group_by(WeekDayEnd, interval) %>%
+  summarise(mean(steps)) %>%
+  rename(Interval=interval, `Mean Steps`=`mean(steps)`)
+```
+
+```
+## `summarise()` regrouping output by 'WeekDayEnd' (override with `.groups` argument)
+```
+
+```r
+ggline(weekdays_total, x="Interval", y="Mean Steps", facet.by="WeekDayEnd", numeric.x.axis=TRUE)
+```
+
+![](PA1_submission_files/figure-html/unnamed-chunk-14-1.png)<!-- -->
+
+Here we observe that on weekdays, there's a clear peak in the morning hours. For weekends, the distribution is rather uniform. 
