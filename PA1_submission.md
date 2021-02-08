@@ -10,6 +10,10 @@ output:
 We will use the tidyverse package to read and process the data.
 We will use ggpubr for plotting.  
 
+```r
+library(tidyverse)
+```
+
 ```
 ## -- Attaching packages --------------------------------------- tidyverse 1.3.0 --
 ```
@@ -25,6 +29,11 @@ We will use ggpubr for plotting.
 ## -- Conflicts ------------------------------------------ tidyverse_conflicts() --
 ## x dplyr::filter() masks stats::filter()
 ## x dplyr::lag()    masks stats::lag()
+```
+
+```r
+library(ggpubr)
+data<-read_csv("activity.csv")
 ```
 
 ```

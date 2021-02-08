@@ -9,7 +9,7 @@ output:
 ## Loading and preprocessing the data
 We will use the tidyverse package to read and process the data.
 We will use ggpubr for plotting.  
-```{r echo=FALSE}
+```{r}
 library(tidyverse)
 library(ggpubr)
 data<-read_csv("activity.csv")
